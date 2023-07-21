@@ -95,7 +95,7 @@ library(plotly)
 heatmap <- plot_ly(data_diarrhoea, x = ~period, y = ~county, z = ~diarrhoea.cases,
                    type = "heatmap", colors = "viridis",
                    colorscale = "viridis", showscale = TRUE) %>%
-  layout(title = "Interactive Heatmap: Diarrhoea Cases among Children Under 5",
+  layout(title = "Interactive Heatmap: Diarrhoea Cases among Children in the different counties",
          xaxis = list(title = "Period"),
          yaxis = list(title = "County"),
          grid = list(rows = unique(data_diarrhoea$county)),
