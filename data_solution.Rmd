@@ -1,0 +1,199 @@
+```{r}
+install.packages("readr")
+```
+```{r}
+install.packages('textshaping')
+```
+
+```{r}
+install.packages('ragg')
+```
+
+```{r}
+install.packages('tidyverse')
+```
+
+```{r}
+library(readr)
+library(tidyverse)
+```
+```{r}
+#import and display the data
+getwd()
+data <- read.csv('data/cema_internship_task_2023.csv', header=TRUE, sep=",")
+data
+```
+Question 1
+Is there a correlation between the number of children dewormed and the prevalence of acute malnutrition at the county level over the study period?
+Since, acute malnutrition data has missing values I will fill them with a mean value and with 0, and see which value gives a resonable answer.
+```{r}
+#return columns with missing data
+na_columns <- colnames(data)[apply(data, 2, anyNA)]
+na_columns
+```
+```{r}
+#create mean value ignoring the missing values
+mean_acute <- mean(data$Acute.Malnutrition, na.rm=TRUE)
+mean_acute
+```
+```{r}
+#create new column with mean values using mutate
+data_replace_acute <- data %>% mutate(replace_acute = ifelse(is.na(Acute.Malnutrition), mean_acute, Acute.Malnutrition))
+data_replace_acute
+```
+Calculating the correlation
+```{r}
+install.packages('lme4')
+install.packages('pbkrtest')
+install.packages('car')
+install.packages("rstatix")
+
+install.packages("ggpubr", repos = "https://cloud.r-project.org/", dependencies = TRUE)
+
+
+```
+```{r}
+install.packages("nloptr")
+```
+```{r}
+#The Spearman correlation method computes the correlation between the rank of x and the rank of y variable
+#Correlation between children dewormed and acute malnutrition
+data_replace_acute <- data %>% mutate(replace_acute = ifelse(is.na(Acute.Malnutrition), mean_acute, Acute.Malnutrition))
+data_replace_acute
+```
+
+
+```{r}
+correlation <- cor(data_replace_acute$Total.Dewormed, data_replace_acute$replace_acute, use = "complete.obs")
+cat("Correlation between Total Dewormed and Acute Malnutrition:", correlation, "\n")
+```
+Visually present the correlation
+```{r}
+# Plot the scatter plot
+ggplot(data_replace_acute, aes(x = Total.Dewormed, y = replace_acute)) +
+  geom_point() +
+  labs(title = "Scatter Plot: Total Dewormed vs. Acute Malnutrition",
+       x = "Total Dewormed",
+       y = "Acute Malnutrition") +
+  theme_minimal()
+```
+Based on the scatter plot there's no strong correlation between the dewormed children and malnutrition.
+Q2.Is there a trend in the number of diarrhoea cases among children under the 5 years in the different counties?
+```{r}
+#diarrhoea cases per county per period
+data_diarrhoea <- data %>% select(period, county, diarrhoea.cases)
+data_diarrhoea
+```
+
+```{r}
+#install.packages('plotly')
+#install.packages("viridis")
+library(viridis)
+library(plotly)
+
+# Create the interactive heatmap using plot_ly
+heatmap <- plot_ly(data_diarrhoea, x = ~period, y = ~county, z = ~diarrhoea.cases,
+                   type = "heatmap", colors = "viridis",
+                   colorscale = "viridis", showscale = TRUE) %>%
+  layout(title = "Interactive Heatmap: Diarrhoea Cases among Children Under 5",
+         xaxis = list(title = "Period"),
+         yaxis = list(title = "County"),
+         grid = list(rows = unique(data_diarrhoea$county)),
+         margin = list(l = 80, b = 80))
+
+# Display the interactive heatmap
+heatmap
+```
+
+The heatmap shows that Nairobi county tends to experience cases of diarrhoea over the period the data was collected with less cases being reported in the Aug-22, Jan-21, Jul-22 and  Sep-22. High cases we reported in Feb, Mar and April 2023.
+
+Q3. Which is the county with highest number of dewormed children?
+```{r}
+# group the data by county and period
+data_grouped_by_county_period <- data %>% 
+  group_by(county, period)
+```
+```{r}
+library(dplyr)
+
+# Group the data by County and calculate average Total Dewormed and Acute Malnutrition
+data_grouped_avg <- data_replace_acute %>% 
+  group_by(county) %>%
+  summarise(avg_Total_Dewormed = mean(Total.Dewormed, na.rm = TRUE),
+            avg_Acute_Malnutrition = mean(replace_acute, na.rm = TRUE))
+```
+
+```{r}
+# Visualize average Total Dewormed by County
+ggplot(data_grouped_avg, aes(x = county, y = avg_Total_Dewormed)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Average Total Dewormed by County",
+       x = "County", y = "Average Total Dewormed") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+Nairobi has the highest numer of dewormed children
+
+Q4. Which county has the highest number of malnutritioned kids?
+```{r}
+# Visualize average Acute Malnutrition by County
+ggplot(data_grouped_avg, aes(x = county, y = avg_Acute_Malnutrition)) +
+  geom_bar(stat = "identity", fill = "lightgreen") +
+  labs(title = "Average Acute Malnutrition by County",
+       x = "County", y = "Average Acute Malnutrition") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+Q6.What is the rate of acute malnutrition, stunting and underweight for each county?
+```{r}
+#replace missing values the columns "stunted.6.23.months"  "stunted.0..6.months"  "stunted.24.59.months"
+# Calculate the mean of stunted.6.23.months
+mean_stunted_6_23 <- mean(data$stunted.6.23.months, na.rm = TRUE)
+
+
+# Replace missing values with the mean for stunted.6.23.months
+data_replace <- data %>% mutate(stunted.6.23.months = ifelse(is.na(stunted.6.23.months), mean_stunted_6_23, stunted.6.23.months))
+
+# Calculate the mean of stunted.0..6.months
+mean_stunted_0_6 <- mean(data$stunted.0..6.months, na.rm = TRUE)
+
+# Replace missing values with the mean for stunted.0..6.months
+data_replace <- data %>% mutate(stunted.0..6.months = ifelse(is.na(stunted.0..6.months), mean_stunted_0_6, stunted.0..6.months))
+
+# Calculate the mean of stunted.24.59.months
+mean_stunted_24_59 <- mean(data$stunted.24.59.months, na.rm = TRUE)
+
+# Replace missing values with the mean for stunted.24.59.months
+data_replace <- data %>% mutate(stunted.24.59.months = ifelse(is.na(stunted.24.59.months), mean_stunted_24_59, stunted.24.59.months))
+
+# Replace missing values with the mean for acute malnutrition
+mean_acute <- mean(data$Acute.Malnutrition, na.rm=TRUE)
+
+#create new column with mean values using mutate
+data_replace <- data %>% mutate(Acute.Malnutrition = ifelse(is.na(Acute.Malnutrition), mean_acute, Acute.Malnutrition))
+
+
+data_replace
+```
+```{r}
+#return columns with missing data
+na_columns <- colnames(data_replace)[apply(data_replace, 2, anyNA)]
+na_columns
+```
+
+```{r}
+# Create the grouped bar chart
+ggplot(data_replace, aes(x = county)) +
+  geom_bar(aes(y = stunted.6.23.months, fill = "6-23 months"), position = "dodge", stat = "identity", width = 0.5) +
+  geom_bar(aes(y = stunted.0..6.months, fill = "0-6 months"), position = "dodge", stat = "identity", width = 0.5) +
+  geom_bar(aes(y = stunted.24.59.months, fill = "24-59 months"), position = "dodge", stat = "identity", width = 0.5) +
+  labs(title = "Rates of Stunting by Age Group and County",
+       x = "County", y = "Prevalence Rate (%)") +
+  scale_fill_manual(name = "Age Group",
+                    values = c("6-23 months" = "blue", "0-6 months" = "red", "24-59 months" = "green"),
+                    labels = c("6-23 months" = "6-23 months", "0-6 months" = "0-6 months", "24-59 months" = "24-59 months")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_flip()
+
+
+```
+The data shows for age group 0-6 months  Nairobi has the highest rate of stunted growth, for 24-59 months Garissa has the highest and 6 - 23 months Kitui has the highest.
